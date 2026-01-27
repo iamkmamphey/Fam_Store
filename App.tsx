@@ -452,28 +452,26 @@ const POSTerminal = () => {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>(db.getProducts());
   const [cart, setCart] = useState<{ product: Product, quantity: number }[]>([]);
-  const [isScannerOpen, setScannerOpen] = useState(false);
+  const [isScannerOpen, setScannerOpen] = useState(true);
   const [isProcessing, setProcessing] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<Sale | null>(null);
 
   useEffect(() => {
     let scanner: Html5QrcodeScanner | null = null;
-    if (isScannerOpen) {
-      scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
-      scanner.render(onScanSuccess, onScanFailure);
-    }
+    scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+    scanner.render(onScanSuccess, onScanFailure);
     return () => {
       if (scanner) {
         scanner.clear().catch(err => console.error("Scanner cleanup failed", err));
       }
     };
-  }, [isScannerOpen]);
+  }, []);
 
   function onScanSuccess(decodedText: string) {
     const product = products.find(p => p.sku === decodedText);
     if (product) {
       addToCart(product);
-      setScannerOpen(false);
+      // Keep scanner open for next scan
     } else {
       alert("Product not found: " + decodedText);
     }
@@ -640,12 +638,6 @@ const InventoryManagement = () => {
 
     setIsAiScanning(true);
     try {
-      const apiKey = (process.env.API_KEY || process.env.GEMINI_API_KEY) as string | undefined;
-      if (!apiKey) {
-        alert("AI Smart Scan is disabled (no API key configured). For production, do not ship browser API keys—use a server proxy instead.");
-        return;
-      }
-
       // Convert to base64
       const reader = new FileReader();
       const base64Promise = new Promise<string>((resolve) => {
@@ -654,41 +646,18 @@ const InventoryManagement = () => {
       });
       const base64Data = await base64Promise;
 
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: [
-          {
-            parts: [
-              {
-                inlineData: {
-                  data: base64Data,
-                  mimeType: file.type,
-                },
-              },
-              {
-                text: "Analyze this product image. Provide structured JSON for a POS inventory system. Suggested price should be realistic. Category must be one of: Apparel, Footwear, Accessories, Outerwear, or Other.",
-              }
-            ],
-          }
-        ],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              name: { type: Type.STRING, description: "Professional product name" },
-              category: { type: Type.STRING, description: "Broad product category" },
-              description: { type: Type.STRING, description: "Short marketing description" },
-              suggestedPrice: { type: Type.NUMBER, description: "Competitive retail price" },
-            },
-            required: ["name", "category", "description", "suggestedPrice"],
-          }
-        }
+      // Call backend API for AI scan
+      const response = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64Data, mimeType: file.type })
       });
+      const result = await response.json();
+      if (result.error) throw new Error(result.error);
 
-      const data = JSON.parse(response.text);
-      
+      // Parse AI response
+      const data = result.candidates?.[0]?.content?.parts?.[0] ? JSON.parse(result.candidates[0].content.parts[0].text) : {};
+
       // Auto-fill modal
       const priceUsd = Number(data.suggestedPrice);
       const priceGhs = usdToGhs(priceUsd);
@@ -847,8 +816,20 @@ const InventoryManagement = () => {
                  <div className="w-full md:w-48 space-y-3">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Preview</label>
                     <div className="aspect-square bg-slate-100 rounded-3xl overflow-hidden border-4 border-slate-50 relative group">
-                       <img src={editingProduct?.image || "https://placehold.co/400x400?text=No+Image"} className="w-full h-full object-cover" />
-                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-black uppercase">Replace Image</div>
+                       <img src={editingProduct?.image || "https://placehold.co/400x400?text=No+Image"} className="w-full h-full object-cover" id="product-image-preview" />
+                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-black uppercase">{editingProduct ? 'Replace Image' : 'Upload Image'}</div>
+                       <input type="file" accept="image/*" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                         onChange={e => {
+                           const file = e.target.files?.[0];
+                           if (file) {
+                             const reader = new FileReader();
+                             reader.onload = () => {
+                               setEditingProduct(prev => prev ? { ...prev, image: reader.result as string } : { ...prev, image: reader.result as string });
+                             };
+                             reader.readAsDataURL(file);
+                           }
+                         }}
+                       />
                     </div>
                     <input type="hidden" name="image" value={editingProduct?.image || ''} />
                  </div>
