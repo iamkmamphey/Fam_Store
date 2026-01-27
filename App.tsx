@@ -23,6 +23,7 @@ import { User, UserAccount, UserRole, Product, Sale } from './types';
 import { db } from './services/db';
 import { GoogleGenAI, Type } from "@google/genai";
 import famyankLogo from './fam-movement.png';
+import { ghsToUsd, usdToGhs } from './services/currency';
 
 // --- Branding: Logo Component ---
 const FamyankLogo = ({ className = "w-8 h-8", textColor = "text-white" }) => (
@@ -38,6 +39,9 @@ const FamyankLogo = ({ className = "w-8 h-8", textColor = "text-white" }) => (
     </div>
   </div>
 );
+
+const ghsFormatter = new Intl.NumberFormat('en-GH', { style: 'currency', currency: 'GHS' });
+const formatGhs = (amount: number) => ghsFormatter.format(amount);
 
 // --- Auth Context ---
 interface AuthContextType {
@@ -226,8 +230,8 @@ const PublicCatalog = () => {
       <PublicNavbar />
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-black mb-2 tracking-tight">THE CATALOG</h1>
-          <p className="text-gray-600">Premium apparel and accessories by Famyank</p>
+          <h1 className="text-4xl font-black mb-2 tracking-tight">IN-STORE</h1>
+          <p className="text-gray-600">Famyank gives the Best of Prices.</p>
         </div>
 
         <div className="relative mb-8">
@@ -259,7 +263,7 @@ const PublicCatalog = () => {
                 </div>
                 <h3 className="font-bold text-gray-900 line-clamp-1 text-base md:text-lg">{product.name}</h3>
                 <div className="mt-3 flex items-center justify-between">
-                  <span className="text-xl font-black text-black">${product.price.toFixed(2)}</span>
+                  <span className="text-xl font-black text-black">{formatGhs(product.priceGhs)}</span>
                   <div className={`w-2 h-2 rounded-full ${product.stock > 10 ? 'bg-green-500' : product.stock > 0 ? 'bg-orange-500' : 'bg-red-500'}`} />
                 </div>
               </div>
@@ -368,11 +372,11 @@ const AdminDashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <p className="text-sm font-medium text-gray-500 uppercase">Total Revenue</p>
-          <h2 className="text-2xl font-black text-indigo-600 mt-1">${totalRevenue.toFixed(2)}</h2>
+          <h2 className="text-2xl font-black text-indigo-600 mt-1">{formatGhs(totalRevenue)}</h2>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <p className="text-sm font-medium text-gray-500 uppercase">Net Profit</p>
-          <h2 className="text-2xl font-black text-emerald-600 mt-1">${totalProfit.toFixed(2)}</h2>
+          <h2 className="text-2xl font-black text-emerald-600 mt-1">{formatGhs(totalProfit)}</h2>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <p className="text-sm font-medium text-gray-500 uppercase">Total Orders</p>
@@ -489,7 +493,7 @@ const POSTerminal = () => {
     setCart(prev => prev.filter(item => item.product.id !== productId));
   };
 
-  const total = cart.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
+  const total = cart.reduce((acc, item) => acc + (item.product.priceGhs * item.quantity), 0);
 
   const handleCheckout = async () => {
     if (!cart.length || !user) return;
@@ -539,7 +543,7 @@ const POSTerminal = () => {
                 <p className="font-black text-slate-900 leading-tight">{p.name}</p>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{p.sku}</p>
                 <div className="flex items-center justify-between mt-2">
-                  <span className="font-black text-indigo-600 text-lg">${p.price.toFixed(2)}</span>
+                  <span className="font-black text-indigo-600 text-lg">{formatGhs(p.priceGhs)}</span>
                   <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase ${p.stock < 5 ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>Stock: {p.stock}</span>
                 </div>
               </div>
@@ -568,10 +572,10 @@ const POSTerminal = () => {
                 <div key={item.product.id} className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5">
                   <div className="flex-1">
                     <p className="font-black text-sm leading-tight text-white">{item.product.name}</p>
-                    <p className="text-xs text-slate-400 font-medium mt-0.5">${item.product.price} × {item.quantity}</p>
+                    <p className="text-xs text-slate-400 font-medium mt-0.5">{formatGhs(item.product.priceGhs)} × {item.quantity}</p>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="font-black text-indigo-400">${(item.product.price * item.quantity).toFixed(2)}</span>
+                    <span className="font-black text-indigo-400">{formatGhs(item.product.priceGhs * item.quantity)}</span>
                     <button onClick={() => removeFromCart(item.product.id)} className="text-white/20 hover:text-red-400 transition-colors">
                       <X size={18} />
                     </button>
@@ -584,7 +588,7 @@ const POSTerminal = () => {
           <div className="mt-8 pt-8 border-t border-white/10 space-y-6">
             <div className="flex items-center justify-between">
               <span className="text-slate-400 font-black uppercase tracking-widest text-xs">Grand Total</span>
-              <span className="text-3xl font-black text-white">${total.toFixed(2)}</span>
+              <span className="text-3xl font-black text-white">{formatGhs(total)}</span>
             </div>
             <button 
               onClick={handleCheckout}
@@ -680,13 +684,20 @@ const InventoryManagement = () => {
       const data = JSON.parse(response.text);
       
       // Auto-fill modal
+      const priceUsd = Number(data.suggestedPrice);
+      const priceGhs = usdToGhs(priceUsd);
+      const costUsd = Math.round(priceUsd * 0.45 * 100) / 100; // 45% typical margin
+      const costGhs = usdToGhs(costUsd);
+
       setEditingProduct({
         id: `P-AI-${Date.now()}`,
         sku: `FY-AI-${Math.floor(Math.random() * 10000)}`,
         name: data.name,
         description: data.description,
-        price: data.suggestedPrice,
-        costPrice: Math.round(data.suggestedPrice * 0.45 * 100) / 100, // 45% typical margin
+        priceUsd,
+        priceGhs,
+        costUsd,
+        costGhs,
         stock: 0,
         category: data.category,
         image: `data:${file.type};base64,${base64Data}`
@@ -704,13 +715,18 @@ const InventoryManagement = () => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const priceGhs = parseFloat(formData.get('priceGhs') as string);
+    const costGhs = parseFloat(formData.get('costGhs') as string);
+
     const productData: Product = {
       id: editingProduct?.id || `P-${Date.now()}`,
       sku: formData.get('sku') as string,
       name: formData.get('name') as string,
       description: formData.get('description') as string,
-      price: parseFloat(formData.get('price') as string),
-      costPrice: parseFloat(formData.get('costPrice') as string),
+      priceGhs,
+      priceUsd: ghsToUsd(priceGhs),
+      costGhs,
+      costUsd: ghsToUsd(costGhs),
       stock: parseInt(formData.get('stock') as string),
       category: formData.get('category') as string,
       image: (formData.get('image') as string) || editingProduct?.image || `https://picsum.photos/seed/${formData.get('sku')}/400/400`
@@ -788,8 +804,8 @@ const InventoryManagement = () => {
                   <span className="text-[9px] font-black uppercase px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg">{p.category}</span>
                 </td>
                 <td className="px-8 py-6">
-                  <p className="font-black text-indigo-600 text-sm">${p.price.toFixed(2)}</p>
-                  <p className="text-[9px] text-slate-400 font-black italic uppercase tracking-widest mt-0.5">Mgn: ${(p.price - p.costPrice).toFixed(2)}</p>
+                  <p className="font-black text-indigo-600 text-sm">{formatGhs(p.priceGhs)}</p>
+                  <p className="text-[9px] text-slate-400 font-black italic uppercase tracking-widest mt-0.5">Mgn: {formatGhs(p.priceGhs - p.costGhs)}</p>
                 </td>
                 <td className="px-8 py-6">
                   <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase ${p.stock < 10 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
@@ -850,12 +866,12 @@ const InventoryManagement = () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5 ml-1">MSRP ($)</label>
-                      <input name="price" type="number" step="0.01" defaultValue={editingProduct?.price} required className="w-full px-5 py-4 bg-slate-50 rounded-2xl border-2 border-slate-50 focus:border-indigo-600 outline-none font-black text-slate-900 transition-all" />
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5 ml-1">MSRP (₵)</label>
+                      <input name="priceGhs" type="number" step="0.01" defaultValue={editingProduct?.priceGhs} required className="w-full px-5 py-4 bg-slate-50 rounded-2xl border-2 border-slate-50 focus:border-indigo-600 outline-none font-black text-slate-900 transition-all" />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5 ml-1">Asset Cost ($)</label>
-                      <input name="costPrice" type="number" step="0.01" defaultValue={editingProduct?.costPrice} required className="w-full px-5 py-4 bg-slate-50 rounded-2xl border-2 border-slate-50 focus:border-indigo-600 outline-none font-black text-slate-900 transition-all" />
+                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5 ml-1">Asset Cost (₵)</label>
+                      <input name="costGhs" type="number" step="0.01" defaultValue={editingProduct?.costGhs} required className="w-full px-5 py-4 bg-slate-50 rounded-2xl border-2 border-slate-50 focus:border-indigo-600 outline-none font-black text-slate-900 transition-all" />
                     </div>
                  </div>
               </div>

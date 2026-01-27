@@ -26,8 +26,15 @@ export interface Product {
   sku: string;
   name: string;
   description: string;
-  price: number;
-  costPrice: number;
+  // Store pricing in both currencies ("backend" storage).
+  priceGhs: number;
+  priceUsd: number;
+  costGhs: number;
+  costUsd: number;
+
+  // Legacy fields (migrated at runtime). Kept for backward compatibility only.
+  price?: number;
+  costPrice?: number;
   stock: number;
   category: string;
   image: string;

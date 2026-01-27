@@ -1,6 +1,7 @@
 
 import { Product, Sale, DailyReport, UserAccount, UserRole } from '../types';
 import { INITIAL_PRODUCTS, MOCK_USERS } from './mockData';
+import { ghsToUsd, moneyRound, usdToGhs } from './currency';
 
 const STORAGE_KEYS = {
   PRODUCTS: 'famyank_products',
@@ -15,6 +16,57 @@ class FamyankDB {
   constructor() {
     if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS)) {
       localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(INITIAL_PRODUCTS));
+    } else {
+      // Product pricing migration: ensure both USD + GHS are stored.
+      try {
+        const products: Product[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
+        let changed = false;
+        const migrated = products.map((p: any) => {
+          if (p && typeof p === 'object') {
+            // Legacy fields: price/costPrice (assume USD)
+            if ((p.priceGhs == null || p.priceUsd == null) && typeof p.price === 'number') {
+              p.priceUsd = p.price;
+              p.priceGhs = usdToGhs(p.priceUsd);
+              delete p.price;
+              changed = true;
+            }
+            if ((p.costGhs == null || p.costUsd == null) && typeof p.costPrice === 'number') {
+              p.costUsd = p.costPrice;
+              p.costGhs = usdToGhs(p.costUsd);
+              delete p.costPrice;
+              changed = true;
+            }
+
+            // Partial fields: compute the other side if missing
+            if (typeof p.priceUsd === 'number' && (p.priceGhs == null || Number.isNaN(p.priceGhs))) {
+              p.priceGhs = usdToGhs(p.priceUsd);
+              changed = true;
+            }
+            if (typeof p.priceGhs === 'number' && (p.priceUsd == null || Number.isNaN(p.priceUsd))) {
+              p.priceUsd = ghsToUsd(p.priceGhs);
+              changed = true;
+            }
+            if (typeof p.costUsd === 'number' && (p.costGhs == null || Number.isNaN(p.costGhs))) {
+              p.costGhs = usdToGhs(p.costUsd);
+              changed = true;
+            }
+            if (typeof p.costGhs === 'number' && (p.costUsd == null || Number.isNaN(p.costUsd))) {
+              p.costUsd = ghsToUsd(p.costGhs);
+              changed = true;
+            }
+
+            // Normalize precision
+            if (typeof p.priceGhs === 'number') p.priceGhs = moneyRound(p.priceGhs);
+            if (typeof p.priceUsd === 'number') p.priceUsd = moneyRound(p.priceUsd);
+            if (typeof p.costGhs === 'number') p.costGhs = moneyRound(p.costGhs);
+            if (typeof p.costUsd === 'number') p.costUsd = moneyRound(p.costUsd);
+          }
+          return p;
+        });
+        if (changed) localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(migrated));
+      } catch {
+        // ignore
+      }
     }
     if (!localStorage.getItem(STORAGE_KEYS.SALES)) {
       localStorage.setItem(STORAGE_KEYS.SALES, JSON.stringify([]));
@@ -131,8 +183,9 @@ class FamyankDB {
       }
 
       products[pIndex].stock -= item.quantity;
-      const subtotal = item.product.price * item.quantity;
-      const subProfit = (item.product.price - item.product.costPrice) * item.quantity;
+      // Frontend currency is Ghana cedis; sales are tracked in GHS here.
+      const subtotal = item.product.priceGhs * item.quantity;
+      const subProfit = (item.product.priceGhs - item.product.costGhs) * item.quantity;
       
       totalAmount += subtotal;
       totalProfit += subProfit;
@@ -140,7 +193,7 @@ class FamyankDB {
       saleItems.push({
         productId: item.product.id,
         quantity: item.quantity,
-        unitPrice: item.product.price,
+        unitPrice: item.product.priceGhs,
         total: subtotal
       });
     }

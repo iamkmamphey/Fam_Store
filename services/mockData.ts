@@ -1,5 +1,6 @@
 
 import { Product, UserAccount, UserRole } from '../types';
+import { usdToGhs } from './currency';
 
 export const INITIAL_PRODUCTS: Product[] = [
   {
@@ -7,8 +8,10 @@ export const INITIAL_PRODUCTS: Product[] = [
     sku: 'FY-SH-001',
     name: 'Classic White Shirt',
     description: '100% Cotton premium white shirt',
-    price: 45.00,
-    costPrice: 20.00,
+    priceUsd: 45.00,
+    priceGhs: usdToGhs(45.00),
+    costUsd: 20.00,
+    costGhs: usdToGhs(20.00),
     stock: 50,
     category: 'Apparel',
     image: 'https://picsum.photos/seed/shirt/400/400'
@@ -18,8 +21,10 @@ export const INITIAL_PRODUCTS: Product[] = [
     sku: 'FY-JN-002',
     name: 'Slim Fit Jeans',
     description: 'Durable blue denim slim fit jeans',
-    price: 89.99,
-    costPrice: 40.00,
+    priceUsd: 89.99,
+    priceGhs: usdToGhs(89.99),
+    costUsd: 40.00,
+    costGhs: usdToGhs(40.00),
     stock: 35,
     category: 'Apparel',
     image: 'https://picsum.photos/seed/jeans/400/400'
@@ -29,8 +34,10 @@ export const INITIAL_PRODUCTS: Product[] = [
     sku: 'FY-JK-003',
     name: 'Winter Bomber Jacket',
     description: 'Insulated waterproof bomber jacket',
-    price: 120.00,
-    costPrice: 65.00,
+    priceUsd: 120.00,
+    priceGhs: usdToGhs(120.00),
+    costUsd: 65.00,
+    costGhs: usdToGhs(65.00),
     stock: 12,
     category: 'Outerwear',
     image: 'https://picsum.photos/seed/jacket/400/400'
@@ -40,8 +47,10 @@ export const INITIAL_PRODUCTS: Product[] = [
     sku: 'FY-SN-004',
     name: 'Urban Sneakers',
     description: 'Lightweight breathable mesh sneakers',
-    price: 75.00,
-    costPrice: 35.00,
+    priceUsd: 75.00,
+    priceGhs: usdToGhs(75.00),
+    costUsd: 35.00,
+    costGhs: usdToGhs(35.00),
     stock: 20,
     category: 'Footwear',
     image: 'https://picsum.photos/seed/shoes/400/400'
