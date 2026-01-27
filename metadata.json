@@ -1,0 +1,7 @@
+{
+  "name": "Famyank POS & Inventory",
+  "description": "A comprehensive mobile-first stock management and point-of-sale system with real-time analytics, barcode scanning, and role-based access control.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
