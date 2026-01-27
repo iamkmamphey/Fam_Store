@@ -353,6 +353,10 @@ const AdminDashboard = () => {
   const totalProfit = sales.reduce((acc, s) => acc + s.totalProfit, 0);
   const lowStock = products.filter(p => p.stock < 10).length;
 
+    // Convert total revenue and profit from GHS to USD
+    const totalRevenueUsd = ghsToUsd(totalRevenue);
+    const totalProfitUsd = ghsToUsd(totalProfit);
+
   const categoryData = products.reduce((acc: any[], p) => {
     const existing = acc.find(item => item.name === p.category);
     if (existing) existing.value += p.stock;
@@ -373,10 +377,12 @@ const AdminDashboard = () => {
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <p className="text-sm font-medium text-gray-500 uppercase">Total Revenue</p>
           <h2 className="text-2xl font-black text-indigo-600 mt-1">{formatGhs(totalRevenue)}</h2>
+          <p className="text-xs text-gray-400 mt-1">USD: ${totalRevenueUsd.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</p>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <p className="text-sm font-medium text-gray-500 uppercase">Net Profit</p>
           <h2 className="text-2xl font-black text-emerald-600 mt-1">{formatGhs(totalProfit)}</h2>
+          <p className="text-xs text-gray-400 mt-1">USD: ${totalProfitUsd.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}</p>
         </div>
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <p className="text-sm font-medium text-gray-500 uppercase">Total Orders</p>
