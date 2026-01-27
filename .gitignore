@@ -1,24 +1,133 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Generated .gitignore file for: Python, Java, Node, NestJS, Next.js, Electron, VSCode, Xcode, Rider, Windows, iOS, Android, Linux, macOS, npm, Vite, MySQL, SQLite, Neo4j, CSV, JSON, Excel, Docker, GitHub Actions, Kubernetes, Jenkins, Terraform
+# Created with FOSSA's DevOps Tools
 
-node_modules
-dist
-dist-ssr
-*.local
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+venv/
+env/
+.env
+*.so
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.logs
+.mtj.tmp/
+hs_err_pid*
+target/
+build/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+.env
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+dist/
+.cache/
+coverage/
+
+# NestJS
+# Add NestJS-specific ignores here
+
+# Next.js
+# Add Next.js-specific ignores here
+
+# Electron
+# Add Electron-specific ignores here
+
+# VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Xcode
+# Add Xcode-specific ignores here
+
+# Rider
+# Add Rider-specific ignores here
+
+# Windows
+# Add Windows-specific ignores here
+
+# iOS
+# Add iOS-specific ignores here
+
+# Android
+# Add Android-specific ignores here
+
+# Linux
+# Add Linux-specific ignores here
+
+# macOS
+# Add macOS-specific ignores here
+
+# npm
+# Add npm-specific ignores here
+
+# Vite
+# Add Vite-specific ignores here
+
+# MySQL
+# Add MySQL-specific ignores here
+
+# SQLite
+# Add SQLite-specific ignores here
+
+# Neo4j
+# Add Neo4j-specific ignores here
+
+# CSV
+# Add CSV-specific ignores here
+
+# JSON
+# Add JSON-specific ignores here
+
+# Excel
+# Add Excel-specific ignores here
+
+# Docker
+docker-compose.override.yml
+Dockerfile.override
+.dockerignore
+
+# GitHub Actions
+# Add GitHub Actions-specific ignores here
+
+# Kubernetes
+# Add Kubernetes-specific ignores here
+
+# Jenkins
+# Add Jenkins-specific ignores here
+
+# Terraform
+# Add Terraform-specific ignores here
+
+# Common
+.DS_Store
+Thumbs.db
+*.log
+*.bak
+*.tmp
+*.swp
+*~
+
+# IDE and editor generated files
+.idea/
+*.sublime-*
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Cursor / local tooling
+.cursor/
