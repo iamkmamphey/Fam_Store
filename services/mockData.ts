@@ -63,8 +63,7 @@ export const MOCK_USERS: UserAccount[] = [
     name: 'Admin Francisca',
     role: UserRole.ADMIN,
     email: 'admin@famyank.com',
-    passwordSalt: 'nmCW6I/Ff8D7oeWYdAoUWA==',
-    passwordHash: 'Jki6eKMfdInzCPjpT7QrENjRvd9SK2F7yAlbwITAUk8='
+    password: 'Famyank0310'
   },
   {
     id: 'u2',
