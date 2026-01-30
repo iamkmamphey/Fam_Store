@@ -10,62 +10,24 @@ const STORAGE_KEYS = {
   USERS: 'famyank_users'
 };
 
+const API_BASE = '/api';
+
 class FamyankDB {
   private events = new EventTarget();
 
   constructor() {
-    if (!localStorage.getItem(STORAGE_KEYS.PRODUCTS)) {
+    const storedProducts = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
+    if (!storedProducts) {
       localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(INITIAL_PRODUCTS));
     } else {
-      // Product pricing migration: ensure both USD + GHS are stored.
+      // Check if we have enough products, if not restore the initial 40
       try {
-        const products: Product[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.PRODUCTS) || '[]');
-        let changed = false;
-        const migrated = products.map((p: any) => {
-          if (p && typeof p === 'object') {
-            // Legacy fields: price/costPrice (assume USD)
-            if ((p.priceGhs == null || p.priceUsd == null) && typeof p.price === 'number') {
-              p.priceUsd = p.price;
-              p.priceGhs = usdToGhs(p.priceUsd);
-              delete p.price;
-              changed = true;
-            }
-            if ((p.costGhs == null || p.costUsd == null) && typeof p.costPrice === 'number') {
-              p.costUsd = p.costPrice;
-              p.costGhs = usdToGhs(p.costUsd);
-              delete p.costPrice;
-              changed = true;
-            }
-
-            // Partial fields: compute the other side if missing
-            if (typeof p.priceUsd === 'number' && (p.priceGhs == null || Number.isNaN(p.priceGhs))) {
-              p.priceGhs = usdToGhs(p.priceUsd);
-              changed = true;
-            }
-            if (typeof p.priceGhs === 'number' && (p.priceUsd == null || Number.isNaN(p.priceUsd))) {
-              p.priceUsd = ghsToUsd(p.priceGhs);
-              changed = true;
-            }
-            if (typeof p.costUsd === 'number' && (p.costGhs == null || Number.isNaN(p.costGhs))) {
-              p.costGhs = usdToGhs(p.costUsd);
-              changed = true;
-            }
-            if (typeof p.costGhs === 'number' && (p.costUsd == null || Number.isNaN(p.costUsd))) {
-              p.costUsd = ghsToUsd(p.costGhs);
-              changed = true;
-            }
-
-            // Normalize precision
-            if (typeof p.priceGhs === 'number') p.priceGhs = moneyRound(p.priceGhs);
-            if (typeof p.priceUsd === 'number') p.priceUsd = moneyRound(p.priceUsd);
-            if (typeof p.costGhs === 'number') p.costGhs = moneyRound(p.costGhs);
-            if (typeof p.costUsd === 'number') p.costUsd = moneyRound(p.costUsd);
-          }
-          return p;
-        });
-        if (changed) localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(migrated));
+        const products: Product[] = JSON.parse(storedProducts);
+        if (products.length < 40) {
+          localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(INITIAL_PRODUCTS));
+        }
       } catch {
-        // ignore
+        localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(INITIAL_PRODUCTS));
       }
     }
     if (!localStorage.getItem(STORAGE_KEYS.SALES)) {
@@ -86,6 +48,14 @@ class FamyankDB {
         // ignore
       }
     }
+
+    this.syncProductsFromBackend().then((synced) => {
+      if (!synced) this.persistProductsToBackend(this.getProducts());
+    });
+
+    setInterval(() => {
+      this.syncProductsFromBackend();
+    }, 15000);
   }
 
   getProducts(): Product[] {
@@ -167,6 +137,32 @@ class FamyankDB {
     this.events.dispatchEvent(new Event('change'));
   }
 
+  private async syncProductsFromBackend(): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE}/products`);
+      if (!res.ok) return false;
+      const products = await res.json();
+      if (!Array.isArray(products)) return false;
+      localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+      this.notify();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private async persistProductsToBackend(products: Product[]) {
+    try {
+      await fetch(`${API_BASE}/products`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products })
+      });
+    } catch {
+      // ignore backend sync errors
+    }
+  }
+
   async executeSale(cart: { product: Product, quantity: number }[], staff: { id: string, name: string }): Promise<Sale> {
     const products = this.getProducts();
     const sales = this.getSales();
@@ -212,7 +208,7 @@ class FamyankDB {
     
     localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
     localStorage.setItem(STORAGE_KEYS.SALES, JSON.stringify(sales));
-    
+    this.persistProductsToBackend(products);
     this.notify();
     return newSale;
   }
@@ -223,6 +219,7 @@ class FamyankDB {
     if (index !== -1) {
       products[index] = updatedProduct;
       localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+      this.persistProductsToBackend(products);
       this.notify();
     }
   }
@@ -231,6 +228,18 @@ class FamyankDB {
     const products = this.getProducts();
     products.push(newProduct);
     localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
+    this.persistProductsToBackend(products);
+    this.notify();
+  }
+
+  resetSales() {
+    localStorage.setItem(STORAGE_KEYS.SALES, JSON.stringify([]));
+    this.notify();
+  }
+
+  restoreInitialProducts() {
+    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(INITIAL_PRODUCTS));
+    this.persistProductsToBackend(INITIAL_PRODUCTS);
     this.notify();
   }
 }

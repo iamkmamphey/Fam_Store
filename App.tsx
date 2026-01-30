@@ -508,6 +508,13 @@ const ReportsPage = () => {
     window.print();
   };
 
+  const handleResetSales = () => {
+    if (confirm('Are you sure you want to reset all sales data? This action cannot be undone.')) {
+      db.resetSales();
+      alert('Sales data has been reset successfully.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <header className="flex items-center justify-between">
@@ -515,13 +522,22 @@ const ReportsPage = () => {
           <h1 className="text-3xl font-black">ANALYTICS OVERVIEW</h1>
           <p className="text-gray-500">Real-time performance metrics</p>
         </div>
-        <button
-          onClick={handlePrintReport}
-          className="no-print bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20"
-        >
-          <Printer size={18} />
-          Print Report
-        </button>
+        <div className="no-print flex items-center gap-3">
+          <button
+            onClick={handleResetSales}
+            className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-red-700 transition-all shadow-lg shadow-red-600/20"
+          >
+            <X size={18} />
+            Reset Sales
+          </button>
+          <button
+            onClick={handlePrintReport}
+            className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20"
+          >
+            <Printer size={18} />
+            Print Report
+          </button>
+        </div>
       </header>
 
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-[2rem] p-8 shadow-sm">
@@ -1139,6 +1155,13 @@ const InventoryManagement = () => {
     setEditingProduct(null);
   };
 
+  const handleRestoreProducts = () => {
+    if (confirm('Restore all 40 default products? This will replace your current inventory.')) {
+      db.restoreInitialProducts();
+      alert('Products restored successfully!');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1146,13 +1169,22 @@ const InventoryManagement = () => {
           <h1 className="text-3xl font-black tracking-tight uppercase">Inventory</h1>
           <p className="text-slate-500 font-medium">Global Stock Control & Management</p>
         </div>
-        <button 
-          onClick={() => { setEditingProduct(null); setModalOpen(true); }}
-          className="bg-black text-white px-6 py-4 rounded-[1.5rem] font-black flex items-center gap-3 hover:bg-slate-800 transition-all shadow-xl shadow-black/20"
-        >
-          <Package size={20} />
-          Add Manual
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleRestoreProducts}
+            className="bg-indigo-600 text-white px-6 py-4 rounded-[1.5rem] font-black flex items-center gap-3 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20"
+          >
+            <Package size={20} />
+            Restore Products
+          </button>
+          <button 
+            onClick={() => { setEditingProduct(null); setModalOpen(true); }}
+            className="bg-black text-white px-6 py-4 rounded-[1.5rem] font-black flex items-center gap-3 hover:bg-slate-800 transition-all shadow-xl shadow-black/20"
+          >
+            <Package size={20} />
+            Add Manual
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-[2rem] overflow-hidden border border-slate-100 shadow-xl shadow-slate-200/50 overflow-x-auto">
