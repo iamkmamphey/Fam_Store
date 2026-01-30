@@ -11,9 +11,21 @@
       body {
         font-family: 'Inter', sans-serif;
       }
-      .scanner-container video {
-        border-radius: 12px;
-        width: 100% !important;
+      @media print {
+        .no-print {
+          display: none !important;
+        }
+        @page {
+          margin: 1.5cm;
+          size: A4;
+        }
+        body {
+          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact;
+        }
+        * {
+          box-shadow: none !important;
+        }
       }
     </style>
   <script type="importmap">
@@ -25,7 +37,6 @@
     "react-router-dom": "https://esm.sh/react-router-dom@^7.12.0",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
     "recharts": "https://esm.sh/recharts@^3.7.0",
-    "html5-qrcode": "https://esm.sh/html5-qrcode@^2.3.8",
     "@google/genai": "https://esm.sh/@google/genai@^1.38.0"
   }
 }

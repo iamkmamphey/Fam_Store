@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { HashRouter, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -14,10 +14,12 @@ import {
   User as UserIcon,
   Users,
   Search,
-  Sparkles,
-  Camera,
-  Upload,
-  Loader2
+  Loader2,
+  Lightbulb,
+  TrendingUp,
+  Zap,
+  AlertTriangle,
+  Printer
 } from 'lucide-react';
 import { User, UserAccount, UserRole, Product, Sale } from './types';
 import { db } from './services/db';
@@ -338,7 +340,139 @@ const LoginPage = () => {
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
-const AdminDashboard = () => {
+const Dashboard = () => {
+  const [sales, setSales] = useState(db.getSales());
+  const [products, setProducts] = useState(db.getProducts());
+
+  useEffect(() => {
+    return db.subscribe(() => {
+      setSales(db.getSales());
+      setProducts(db.getProducts());
+    });
+  }, []);
+
+  const totalRevenue = sales.reduce((acc, s) => acc + s.totalAmount, 0);
+  const totalProfit = sales.reduce((acc, s) => acc + s.totalProfit, 0);
+  const lowStock = products.filter(p => p.stock < 10).length;
+
+  const totalRevenueUsd = ghsToUsd(totalRevenue);
+  const totalProfitUsd = ghsToUsd(totalProfit);
+
+  const recentSales = sales.slice(-5);
+
+  return (
+    <div className="space-y-6">
+      <header>
+        <h1 className="text-3xl font-black">DASHBOARD</h1>
+        <p className="text-gray-500">Quick overview of your business</p>
+      </header>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white p-6 rounded-2xl shadow-lg">
+          <p className="text-sm font-medium text-indigo-100 uppercase">Total Revenue</p>
+          <h2 className="text-3xl font-black mt-2">{formatGhs(totalRevenue)}</h2>
+          <p className="text-xs text-indigo-200 mt-1">${totalRevenueUsd.toFixed(2)} USD</p>
+        </div>
+        <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 text-white p-6 rounded-2xl shadow-lg">
+          <p className="text-sm font-medium text-emerald-100 uppercase">Net Profit</p>
+          <h2 className="text-3xl font-black mt-2">{formatGhs(totalProfit)}</h2>
+          <p className="text-xs text-emerald-200 mt-1">${totalProfitUsd.toFixed(2)} USD</p>
+        </div>
+        <div className="bg-gradient-to-br from-blue-600 to-blue-700 text-white p-6 rounded-2xl shadow-lg">
+          <p className="text-sm font-medium text-blue-100 uppercase">Total Orders</p>
+          <h2 className="text-3xl font-black mt-2">{sales.length}</h2>
+          <p className="text-xs text-blue-200 mt-1">All time</p>
+        </div>
+        <div className={`bg-gradient-to-br ${lowStock > 0 ? 'from-red-600 to-red-700' : 'from-slate-600 to-slate-700'} text-white p-6 rounded-2xl shadow-lg`}>
+          <p className="text-sm font-medium text-white/80 uppercase">Low Stock Items</p>
+          <h2 className="text-3xl font-black mt-2">{lowStock}</h2>
+          <p className="text-xs text-white/70 mt-1">{lowStock > 0 ? 'Needs attention' : 'All good'}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <h3 className="font-bold mb-4 text-slate-800 flex items-center gap-2">
+            <ShoppingCart size={20} className="text-indigo-600" />
+            Recent Transactions
+          </h3>
+          {recentSales.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShoppingCart className="text-slate-300" size={32} />
+              </div>
+              <p className="text-slate-500 font-medium">No sales yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentSales.reverse().map(sale => (
+                <div key={sale.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                  <div className="flex-1">
+                    <p className="font-bold text-slate-800 text-sm">{sale.staffName}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{new Date(sale.timestamp).toLocaleString()}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black text-indigo-600">{formatGhs(sale.totalAmount)}</p>
+                    <p className="text-xs text-emerald-600 font-bold">+{formatGhs(sale.totalProfit)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <h3 className="font-bold mb-4 text-slate-800 flex items-center gap-2">
+            <Package size={20} className="text-red-600" />
+            Low Stock Alert
+          </h3>
+          {lowStock === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Package className="text-emerald-600" size={32} />
+              </div>
+              <p className="text-slate-700 font-bold">All items well stocked!</p>
+              <p className="text-slate-500 text-sm mt-1">No action needed</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {products.filter(p => p.stock < 10).slice(0, 5).map(product => (
+                <div key={product.id} className="flex items-center gap-3 p-3 bg-red-50 rounded-xl border border-red-100">
+                  <img src={product.image} className="w-12 h-12 rounded-lg object-cover" />
+                  <div className="flex-1">
+                    <p className="font-bold text-slate-800 text-sm">{product.name}</p>
+                    <p className="text-xs text-slate-500">{product.category}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black text-red-600">{product.stock}</p>
+                    <p className="text-xs text-slate-500">units</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-8 rounded-2xl shadow-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-black mb-2">Need Detailed Analytics?</h3>
+            <p className="text-indigo-100 text-sm">View comprehensive reports, sales summaries, and smart recommendations</p>
+          </div>
+          <Link 
+            to="/admin/reports"
+            className="bg-white text-indigo-600 px-6 py-3 rounded-xl font-bold hover:bg-indigo-50 transition-all shadow-lg"
+          >
+            View Reports
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ReportsPage = () => {
   const [sales, setSales] = useState(db.getSales());
   const [products, setProducts] = useState(db.getProducts());
 
@@ -366,12 +500,71 @@ const AdminDashboard = () => {
 
   const COLORS = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
+  const avgTransactionValue = sales.length > 0 ? totalRevenue / sales.length : 0;
+  const avgProfit = sales.length > 0 ? totalProfit / sales.length : 0;
+  const topCategory = categoryData.length > 0 ? categoryData.reduce((a, b) => a.value > b.value ? a : b) : null;
+
+  const handlePrintReport = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-3xl font-black">ANALYTICS OVERVIEW</h1>
-        <p className="text-gray-500">Real-time performance metrics</p>
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-black">ANALYTICS OVERVIEW</h1>
+          <p className="text-gray-500">Real-time performance metrics</p>
+        </div>
+        <button
+          onClick={handlePrintReport}
+          className="no-print bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20"
+        >
+          <Printer size={18} />
+          Print Report
+        </button>
       </header>
+
+      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-[2rem] p-8 shadow-sm">
+        <h2 className="text-2xl font-black text-slate-900 mb-4">Sales Summary Report</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-slate-700">
+          <div>
+            <p className="font-bold text-indigo-600 mb-2">Performance Overview</p>
+            <p className="text-sm leading-relaxed">
+              {sales.length === 0 
+                ? "No sales recorded yet. Start selling to see your performance metrics here."
+                : `Your store has completed ${sales.length} transaction${sales.length !== 1 ? 's' : ''} with a total revenue of ${formatGhs(totalRevenue)}. The average transaction value stands at ${formatGhs(avgTransactionValue)}, demonstrating ${avgTransactionValue > 0 ? 'solid customer engagement' : 'strong market potential'}.`
+              }
+            </p>
+          </div>
+          <div>
+            <p className="font-bold text-emerald-600 mb-2">Profitability Analysis</p>
+            <p className="text-sm leading-relaxed">
+              {sales.length === 0
+                ? "Profit metrics will appear once sales are recorded."
+                : `Your net profit totals ${formatGhs(totalProfit)} with an average profit per transaction of ${formatGhs(avgProfit)}. This reflects a healthy profit margin of ${((totalProfit / totalRevenue) * 100).toFixed(1)}% across all sales.`
+              }
+            </p>
+          </div>
+          <div>
+            <p className="font-bold text-blue-600 mb-2">Inventory Status</p>
+            <p className="text-sm leading-relaxed">
+              {lowStock === 0
+                ? "All inventory items are well stocked. No restocking needed at this time."
+                : `${lowStock} product${lowStock !== 1 ? 's' : ''} ${lowStock !== 1 ? 'are' : 'is'} currently running low on stock. Consider restocking these items to maintain sales momentum.`
+              }
+            </p>
+          </div>
+          <div>
+            <p className="font-bold text-orange-600 mb-2">Category Insights</p>
+            <p className="text-sm leading-relaxed">
+              {topCategory
+                ? `${topCategory.name} is your top-performing category with ${topCategory.value} units in stock. Focus on maintaining strong inventory in this category.`
+                : "Category data will appear once products are added to your inventory."
+              }
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
@@ -442,55 +635,195 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 border border-emerald-200 rounded-[2rem] p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center">
+            <Lightbulb size={24} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-black text-slate-900">Smart Recommendations</h2>
+            <p className="text-sm text-slate-600">AI-powered suggestions based on sales performance</p>
+          </div>
+        </div>
+
+        {sales.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-slate-600 font-medium">No sales data available yet. Complete some transactions to receive personalized product recommendations.</p>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {(() => {
+              // Analyze best-selling products
+              const productSalesCount: Record<string, number> = {};
+              const productDetails: Record<string, Product> = {};
+              
+              sales.forEach(sale => {
+                sale.items.forEach(item => {
+                  productSalesCount[item.productId] = (productSalesCount[item.productId] || 0) + item.quantity;
+                  const prod = products.find(p => p.id === item.productId);
+                  if (prod) productDetails[item.productId] = prod;
+                });
+              });
+
+              const topProducts = Object.entries(productSalesCount)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 3)
+                .map(([id]) => productDetails[id])
+                .filter(Boolean);
+
+              // Identify top-performing categories by sales volume
+              const categorySalesVolume: Record<string, number> = {};
+              topProducts.forEach(p => {
+                categorySalesVolume[p.category] = (categorySalesVolume[p.category] || 0) + (productSalesCount[p.id] || 0);
+              });
+
+              const topCategory = Object.entries(categorySalesVolume).sort(([, a], [, b]) => b - a)[0]?.[0];
+              
+              // Find similar products in top category that haven't sold much
+              const similarProducts = products
+                .filter(p => p.category === topCategory && !topProducts.find(tp => tp.id === p.id))
+                .sort((a, b) => (productSalesCount[b.id] || 0) - (productSalesCount[a.id] || 0))
+                .slice(0, 2);
+
+              // Find low-stock items
+              const lowStockTopCategory = products
+                .filter(p => p.category === topCategory && p.stock < 5)
+                .slice(0, 2);
+
+              return (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-emerald-200">
+                      <h3 className="font-bold text-emerald-800 mb-4 flex items-center gap-2">
+                        <TrendingUp size={18} className="text-emerald-600" />
+                        Stock More Of These
+                      </h3>
+                      <div className="space-y-3">
+                        {topProducts.length > 0 ? (
+                          topProducts.map((p, idx) => (
+                            <div key={p.id} className="flex items-start gap-3">
+                              <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center font-bold text-emerald-600 text-sm flex-shrink-0">
+                                #{idx + 1}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-bold text-slate-800">{p.name}</p>
+                                <p className="text-xs text-slate-600 mt-1">Sold {productSalesCount[p.id] || 0} units • Current stock: {p.stock} units</p>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-slate-600 text-sm">No sales data to recommend yet.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-emerald-200">
+                      <h3 className="font-bold text-teal-800 mb-4 flex items-center gap-2">
+                        <Zap size={18} className="text-teal-600" />
+                        Expand In {topCategory || 'Top Category'}
+                      </h3>
+                      <div className="space-y-3">
+                        {similarProducts.length > 0 ? (
+                          similarProducts.map((p) => (
+                            <div key={p.id} className="flex items-start gap-3 pb-3 border-b border-slate-100 last:border-0 last:pb-0">
+                              <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
+                                <img src={p.image} className="w-full h-full object-cover" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-bold text-slate-800 text-sm">{p.name}</p>
+                                <p className="text-xs text-slate-600 mt-0.5">Stock: {p.stock} units</p>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-slate-600 text-sm">Limited product variety in top category. Consider adding more options.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {lowStockTopCategory.length > 0 && (
+                    <div className="bg-red-50 rounded-2xl p-6 border border-red-200">
+                      <h3 className="font-bold text-red-800 mb-4 flex items-center gap-2">
+                        <AlertTriangle size={18} className="text-red-600" />
+                        Critical: Restock These Best-Sellers
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {lowStockTopCategory.map((p) => (
+                          <div key={p.id} className="bg-white rounded-xl p-4 border border-red-100">
+                            <p className="font-bold text-slate-800">{p.name}</p>
+                            <p className="text-xs text-red-600 font-bold mt-2">Only {p.stock} units left</p>
+                            <p className="text-xs text-slate-600 mt-1">At current sales rate, may stockout soon.</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-emerald-200">
+                    <h3 className="font-bold text-slate-800 mb-3">📊 Insight Summary</h3>
+                    <p className="text-sm text-slate-700 leading-relaxed">
+                      Based on {sales.length} transaction{sales.length !== 1 ? 's' : ''}, your <span className="font-bold text-emerald-600">{topCategory}</span> category is performing exceptionally well. 
+                      {topProducts.length > 0 ? ` Focus on keeping "${topProducts[0].name}" well-stocked and ` : ' '} 
+                      consider expanding product variety in this category. 
+                      {lowStockTopCategory.length > 0 ? `Prioritize restocking ${lowStockTopCategory.map(p => `"${p.name}"`).join(' and ')} to avoid missed sales opportunities.` : 'Your inventory levels are healthy.'}
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
-
-import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const POSTerminal = () => {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>(db.getProducts());
   const [cart, setCart] = useState<{ product: Product, quantity: number }[]>([]);
-  const [isScannerOpen, setScannerOpen] = useState(true);
+  const [manualProductName, setManualProductName] = useState('');
+  const [manualQty, setManualQty] = useState(1);
   const [isProcessing, setProcessing] = useState(false);
   const [lastReceipt, setLastReceipt] = useState<Sale | null>(null);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [taxRate, setTaxRate] = useState(0);
 
   useEffect(() => {
-    let scanner: Html5QrcodeScanner | null = null;
-    scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 250 } }, false);
-    scanner.render(onScanSuccess, onScanFailure);
-    return () => {
-      if (scanner) {
-        scanner.clear().catch(err => console.error("Scanner cleanup failed", err));
-      }
-    };
+    const updateProducts = () => setProducts(db.getProducts());
+    updateProducts();
+    return db.subscribe(updateProducts);
   }, []);
 
-  function onScanSuccess(decodedText: string) {
-    const product = products.find(p => p.sku === decodedText);
-    if (product) {
-      addToCart(product);
-      // Keep scanner open for next scan
-    } else {
-      alert("Product not found: " + decodedText);
-    }
-  }
-
-  function onScanFailure(error: any) {
-    // console.warn(`Scan error = ${error}`);
-  }
-
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, quantity = 1) => {
     if (product.stock === 0) return alert("Out of stock!");
+    if (quantity <= 0) return;
+    if (product.stock < quantity) return alert("Insufficient stock!");
     setCart(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
-        if (existing.quantity >= product.stock) return prev;
-        return prev.map(item => item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+        if (existing.quantity + quantity > product.stock) return prev;
+        return prev.map(item => item.product.id === product.id ? { ...item, quantity: item.quantity + quantity } : item);
       }
-      return [...prev, { product, quantity: 1 }];
+      return [...prev, { product, quantity }];
     });
+  };
+
+  const handleManualAdd = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const name = manualProductName.trim().toLowerCase();
+    if (!name) return;
+    const product = products.find(p => p.name.trim().toLowerCase() === name)
+      || products.find(p => p.name.trim().toLowerCase().includes(name));
+    if (!product) {
+      alert("Product not found. Please select from the list.");
+      return;
+    }
+    addToCart(product, manualQty);
+    setManualProductName('');
+    setManualQty(1);
   };
 
   const removeFromCart = (productId: string) => {
@@ -506,6 +839,7 @@ const POSTerminal = () => {
       const sale = await db.executeSale(cart, { id: user.id, name: user.name });
       setLastReceipt(sale);
       setCart([]);
+      setShowPrintDialog(true);
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -513,25 +847,75 @@ const POSTerminal = () => {
     }
   };
 
+  const getTaxAmount = () => lastReceipt ? (lastReceipt.totalAmount * taxRate) / 100 : 0;
+  const getGrandTotal = () => lastReceipt ? lastReceipt.totalAmount + getTaxAmount() : 0;
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handlePrintToPDF = () => {
+    window.print();
+  };
+
+  const handleEmail = () => {
+    if (!lastReceipt) return;
+    const subject = `Receipt ${lastReceipt.id}`;
+    const items = lastReceipt.items.map((item, idx) => {
+      const prod = products.find(p => p.id === item.productId);
+      return `${idx + 1}. ${prod?.name || 'Product'} - Qty: ${item.quantity} @ ${formatGhs(item.unitPrice)} = ${formatGhs(item.total)}`;
+    }).join('\n');
+    const body = `RECEIPT\n\nTransaction ID: ${lastReceipt.id}\nDate: ${new Date(lastReceipt.timestamp).toLocaleString()}\nStaff: ${lastReceipt.staffName}\n\n--- ITEMS ---\n${items}\n\nSubtotal: ${formatGhs(lastReceipt.totalAmount)}\nTax (${taxRate}%): ${formatGhs(getTaxAmount())}\nGrand Total: ${formatGhs(getGrandTotal())}`;
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const handleWhatsApp = () => {
+    if (!lastReceipt) return;
+    const items = lastReceipt.items.map((item, idx) => {
+      const prod = products.find(p => p.id === item.productId);
+      return `${idx + 1}. *${prod?.name || 'Product'}*\n   Qty: ${item.quantity} @ ${formatGhs(item.unitPrice)} = ${formatGhs(item.total)}`;
+    }).join('\n\n');
+    const message = `🧾 *RECEIPT*\n\n*Transaction ID:* ${lastReceipt.id}\n*Date:* ${new Date(lastReceipt.timestamp).toLocaleString()}\n*Staff:* ${lastReceipt.staffName}\n\n--- *ITEMS* ---\n\n${items}\n\n*Subtotal:* ${formatGhs(lastReceipt.totalAmount)}\n*Tax (${taxRate}%):* ${formatGhs(getTaxAmount())}\n*Grand Total:* ${formatGhs(getGrandTotal())}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-2 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-black uppercase tracking-tight">Terminal</h1>
-          <button 
-            onClick={() => setScannerOpen(!isScannerOpen)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black transition-all ${isScannerOpen ? 'bg-red-500 text-white shadow-red-500/20' : 'bg-black text-white shadow-black/20'} shadow-xl`}
-          >
-            {isScannerOpen ? <X size={20} /> : <Camera size={20} />}
-            {isScannerOpen ? 'Cancel Scan' : 'Scan SKU'}
-          </button>
         </div>
 
-        {isScannerOpen && (
-          <div className="bg-white p-4 rounded-3xl shadow-xl overflow-hidden scanner-container border-2 border-indigo-100 ring-8 ring-indigo-50">
-            <div id="reader"></div>
+        <form onSubmit={handleManualAdd} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row gap-4 sm:items-end">
+          <div className="flex-1">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5 ml-1">Product</label>
+            <select
+              value={manualProductName}
+              onChange={e => setManualProductName(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-50 rounded-xl border-2 border-slate-50 focus:border-indigo-600 outline-none font-bold text-slate-900 transition-all"
+              required
+            >
+              <option value="" disabled>Select product</option>
+              {products.map(p => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
           </div>
-        )}
+          <div className="w-28">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5 ml-1">Qty</label>
+            <input
+              type="number"
+              min={1}
+              value={manualQty}
+              onChange={e => setManualQty(Math.max(1, Number(e.target.value)))}
+              className="w-full px-4 py-3 bg-slate-50 rounded-xl border-2 border-slate-50 focus:border-indigo-600 outline-none font-bold text-slate-900 transition-all"
+              required
+            />
+          </div>
+          <button type="submit" className="bg-black text-white px-6 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg shadow-black/20">
+            Add
+          </button>
+        </form>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {products.map(p => (
@@ -545,10 +929,8 @@ const POSTerminal = () => {
               <img src={p.image} className="w-16 h-16 rounded-xl object-cover" />
               <div className="flex-1">
                 <p className="font-black text-slate-900 leading-tight">{p.name}</p>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{p.sku}</p>
                 <div className="flex items-center justify-between mt-2">
                   <span className="font-black text-indigo-600 text-lg">{formatGhs(p.priceGhs)}</span>
-                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase ${p.stock < 5 ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>Stock: {p.stock}</span>
                 </div>
               </div>
             </button>
@@ -569,7 +951,7 @@ const POSTerminal = () => {
                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Package className="text-white/20" size={32} />
                  </div>
-                 <p className="text-slate-500 font-bold italic">Empty cart. Scan a product to begin.</p>
+                  <p className="text-slate-500 font-bold italic">Empty cart. Add a product to begin.</p>
               </div>
             ) : (
               cart.map(item => (
@@ -609,10 +991,106 @@ const POSTerminal = () => {
           </div>
         </div>
 
-        {lastReceipt && (
+        {lastReceipt && !showPrintDialog && (
           <div className="bg-emerald-500 text-white p-5 rounded-3xl text-center animate-bounce shadow-xl shadow-emerald-500/20">
             <p className="font-black text-lg">Transaction Secured</p>
             <p className="text-xs font-bold opacity-80 uppercase tracking-widest">ID: {lastReceipt.id}</p>
+          </div>
+        )}
+
+        {showPrintDialog && lastReceipt && (
+          <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white w-full max-w-lg rounded-[2rem] overflow-hidden shadow-2xl my-8">
+              <div className="bg-emerald-500 text-white p-6 text-center">
+                <p className="font-black text-2xl">✓ Transaction Complete</p>
+                <p className="text-sm font-bold opacity-90 mt-1">ID: {lastReceipt.id}</p>
+                <p className="text-xs opacity-80 mt-1">{new Date(lastReceipt.timestamp).toLocaleString()}</p>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <div className="bg-slate-50 rounded-2xl p-4">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Items Purchased</p>
+                  <div className="space-y-2">
+                    {lastReceipt.items.map((item, idx) => {
+                      const prod = products.find(p => p.id === item.productId);
+                      return (
+                        <div key={idx} className="flex items-start justify-between gap-4 pb-2 border-b border-slate-200 last:border-0">
+                          <div className="flex-1">
+                            <p className="font-black text-slate-900 text-sm">{prod?.name || 'Product'}</p>
+                            <p className="text-xs text-slate-500 font-medium">{item.quantity} × {formatGhs(item.unitPrice)}</p>
+                          </div>
+                          <p className="font-black text-indigo-600">{formatGhs(item.total)}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="bg-indigo-50 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 font-bold">Subtotal</span>
+                    <span className="font-black text-slate-900">{formatGhs(lastReceipt.totalAmount)}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="text-slate-600 font-bold flex-shrink-0">Tax Rate (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={taxRate}
+                      onChange={e => setTaxRate(Math.max(0, Math.min(100, Number(e.target.value))))}
+                      className="w-20 px-3 py-2 bg-white rounded-lg border-2 border-indigo-200 focus:border-indigo-600 outline-none font-black text-slate-900 text-center"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600 font-bold">Tax ({taxRate}%)</span>
+                    <span className="font-black text-slate-900">{formatGhs(getTaxAmount())}</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-2 border-t-2 border-indigo-200">
+                    <span className="text-slate-900 font-black uppercase text-sm">Grand Total</span>
+                    <span className="font-black text-indigo-600 text-xl">{formatGhs(getGrandTotal())}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 no-print">
+                  <button 
+                    onClick={handlePrint}
+                    className="bg-indigo-600 text-white px-4 py-3 rounded-xl font-black text-sm hover:bg-indigo-500 transition-all shadow-lg"
+                  >
+                    🖨️ Print
+                  </button>
+                  <button 
+                    onClick={handlePrintToPDF}
+                    className="bg-slate-700 text-white px-4 py-3 rounded-xl font-black text-sm hover:bg-slate-600 transition-all shadow-lg"
+                  >
+                    📄 Save PDF
+                  </button>
+                  <button 
+                    onClick={handleEmail}
+                    className="bg-blue-600 text-white px-4 py-3 rounded-xl font-black text-sm hover:bg-blue-500 transition-all shadow-lg"
+                  >
+                    ✉️ Email
+                  </button>
+                  <button 
+                    onClick={handleWhatsApp}
+                    className="bg-green-600 text-white px-4 py-3 rounded-xl font-black text-sm hover:bg-green-500 transition-all shadow-lg"
+                  >
+                    💬 WhatsApp
+                  </button>
+                </div>
+                
+                <button 
+                  onClick={() => { setShowPrintDialog(false); setLastReceipt(null); setTaxRate(0); }}
+                  className="w-full bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-black hover:bg-slate-200 transition-all no-print"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -624,68 +1102,15 @@ const InventoryManagement = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [isModalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [isAiScanning, setIsAiScanning] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setProducts(db.getProducts());
-    return db.subscribe(() => setProducts(db.getProducts()));
+    const updateProducts = () => {
+      const latest = db.getProducts();
+      setProducts(latest);
+    };
+    updateProducts();
+    return db.subscribe(updateProducts);
   }, []);
-
-  const handleAiSmartAdd = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsAiScanning(true);
-    try {
-      // Convert to base64
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve) => {
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.readAsDataURL(file);
-      });
-      const base64Data = await base64Promise;
-
-      // Call backend API for AI scan
-      const response = await fetch('/api/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base64Data, mimeType: file.type })
-      });
-      const result = await response.json();
-      if (result.error) throw new Error(result.error);
-
-      // Parse AI response
-      const data = result.candidates?.[0]?.content?.parts?.[0] ? JSON.parse(result.candidates[0].content.parts[0].text) : {};
-
-      // Auto-fill modal
-      const priceUsd = Number(data.suggestedPrice);
-      const priceGhs = usdToGhs(priceUsd);
-      const costUsd = Math.round(priceUsd * 0.45 * 100) / 100; // 45% typical margin
-      const costGhs = usdToGhs(costUsd);
-
-      setEditingProduct({
-        id: `P-AI-${Date.now()}`,
-        sku: `FY-AI-${Math.floor(Math.random() * 10000)}`,
-        name: data.name,
-        description: data.description,
-        priceUsd,
-        priceGhs,
-        costUsd,
-        costGhs,
-        stock: 0,
-        category: data.category,
-        image: `data:${file.type};base64,${base64Data}`
-      });
-      setModalOpen(true);
-    } catch (error) {
-      console.error("AI Analysis failed:", error);
-      alert("AI Analysis failed. Please enter manually.");
-    } finally {
-      setIsAiScanning(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -707,7 +1132,7 @@ const InventoryManagement = () => {
       image: (formData.get('image') as string) || editingProduct?.image || `https://picsum.photos/seed/${formData.get('sku')}/400/400`
     };
 
-    if (editingProduct && !editingProduct.id.startsWith('P-AI-')) db.updateProduct(productData);
+    if (editingProduct) db.updateProduct(productData);
     else db.addProduct(productData);
     
     setModalOpen(false);
@@ -721,31 +1146,13 @@ const InventoryManagement = () => {
           <h1 className="text-3xl font-black tracking-tight uppercase">Inventory</h1>
           <p className="text-slate-500 font-medium">Global Stock Control & Management</p>
         </div>
-        <div className="flex gap-2">
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleAiSmartAdd} 
-            className="hidden" 
-            accept="image/*" 
-            capture="environment" 
-          />
-          <button 
-            disabled={isAiScanning}
-            onClick={() => fileInputRef.current?.click()}
-            className="bg-gradient-to-tr from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-[1.5rem] font-black flex items-center gap-3 hover:scale-105 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50"
-          >
-            {isAiScanning ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} />}
-            {isAiScanning ? 'AI Analyzing...' : 'Smart Scan'}
-          </button>
-          <button 
-            onClick={() => { setEditingProduct(null); setModalOpen(true); }}
-            className="bg-black text-white px-6 py-4 rounded-[1.5rem] font-black flex items-center gap-3 hover:bg-slate-800 transition-all shadow-xl shadow-black/20"
-          >
-            <Package size={20} />
-            Add Manual
-          </button>
-        </div>
+        <button 
+          onClick={() => { setEditingProduct(null); setModalOpen(true); }}
+          className="bg-black text-white px-6 py-4 rounded-[1.5rem] font-black flex items-center gap-3 hover:bg-slate-800 transition-all shadow-xl shadow-black/20"
+        >
+          <Package size={20} />
+          Add Manual
+        </button>
       </div>
 
       <div className="bg-white rounded-[2rem] overflow-hidden border border-slate-100 shadow-xl shadow-slate-200/50 overflow-x-auto">
@@ -753,7 +1160,6 @@ const InventoryManagement = () => {
           <thead className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] border-b border-slate-100">
             <tr>
               <th className="px-8 py-6">Product Information</th>
-              <th className="px-8 py-6">SKU / ID</th>
               <th className="px-8 py-6">Category</th>
               <th className="px-8 py-6">Pricing</th>
               <th className="px-8 py-6">Availability</th>
@@ -774,7 +1180,6 @@ const InventoryManagement = () => {
                     </div>
                   </div>
                 </td>
-                <td className="px-8 py-6 font-mono text-xs font-bold text-slate-600 uppercase tracking-tighter">{p.sku}</td>
                 <td className="px-8 py-6">
                   <span className="text-[9px] font-black uppercase px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg">{p.category}</span>
                 </td>
@@ -807,7 +1212,7 @@ const InventoryManagement = () => {
           <div className="bg-white w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 my-8">
             <div className="p-8 border-b border-slate-100 flex items-center justify-between">
               <h2 className="text-2xl font-black uppercase tracking-tight">
-                {editingProduct?.id.startsWith('P-AI-') ? 'Smart Product Verification' : editingProduct ? 'Modify Asset' : 'New Entry'}
+                {editingProduct ? 'Modify Asset' : 'New Entry'}
               </h2>
               <button onClick={() => setModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X /></button>
             </div>
@@ -838,10 +1243,7 @@ const InventoryManagement = () => {
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5 ml-1">Asset Name</label>
                       <input name="name" defaultValue={editingProduct?.name} required className="w-full px-5 py-4 bg-slate-50 rounded-2xl border-2 border-slate-50 focus:border-indigo-600 outline-none font-bold text-slate-900 transition-all" />
                     </div>
-                    <div>
-                      <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5 ml-1">Universal SKU</label>
-                      <input name="sku" defaultValue={editingProduct?.sku} required className="w-full px-5 py-4 bg-slate-50 rounded-2xl border-2 border-slate-50 focus:border-indigo-600 outline-none font-mono font-bold text-indigo-600 transition-all" />
-                    </div>
+                    <input type="hidden" name="sku" defaultValue={editingProduct?.sku || `FY-${Math.floor(Math.random() * 10000)}`} />
                     <div>
                       <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5 ml-1">Categorization</label>
                       <select name="category" defaultValue={editingProduct?.category} required className="w-full px-5 py-4 bg-slate-50 rounded-2xl border-2 border-slate-50 focus:border-indigo-600 outline-none font-bold text-slate-900 transition-all">
@@ -1026,7 +1428,7 @@ const App = () => {
           {/* Admin Routes */}
           <Route path="/admin/dashboard" element={
             <ProtectedRoute roles={[UserRole.ADMIN]}>
-              <AdminDashboard />
+              <Dashboard />
             </ProtectedRoute>
           } />
           <Route path="/admin/staff" element={
@@ -1046,15 +1448,7 @@ const App = () => {
           } />
           <Route path="/admin/reports" element={
             <ProtectedRoute roles={[UserRole.ADMIN]}>
-               <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <BarChart3 size={64} className="text-slate-200 mb-6" />
-                  <h1 className="text-3xl font-black uppercase tracking-tight">Business Intelligence</h1>
-                  <p className="text-slate-500 max-w-md mt-4 font-medium">Export operational data and summarized daily financial reports for audit logging.</p>
-                  <div className="flex gap-4 mt-10">
-                    <button onClick={() => window.print()} className="bg-black text-white px-10 py-4 rounded-[1.5rem] font-black uppercase tracking-widest shadow-xl shadow-black/20 hover:scale-105 transition-all">Export (PDF)</button>
-                    <button className="bg-slate-100 text-slate-900 px-10 py-4 rounded-[1.5rem] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">Excel (CSV)</button>
-                  </div>
-               </div>
+              <ReportsPage />
             </ProtectedRoute>
           } />
 
